@@ -44,7 +44,7 @@ namespace rtt::central {
         //modules.broadcast(ok); //TODO: This call locks/blocks for some reason?
     }
 
-    void Server::handle_interface(proto::UiSettings data) {
+    void Server::handle_interface(proto::UiValues data) {
 
       *this->current_settings.acquire() = stx::Some(std::move(data));
         //TODO: if settingschanged or every 0.5 seconds, send settings to AI
@@ -60,7 +60,7 @@ namespace rtt::central {
             this->handle_roboteam_ai();
         }) };
 
-        roboteam_interface.acquire()->run([this](proto::UiSettings data) { 
+        roboteam_interface.acquire()->run([this](proto::UiValues data) {
             handle_interface(std::move(data)); 
         });
 

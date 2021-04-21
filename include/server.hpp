@@ -46,14 +46,14 @@ namespace rtt::central {
         Mutex<std::thread> module_thread;
 
         // placeholder type Setting
-        Mutex<stx::Option<proto::UiSettings>> current_settings;
+        Mutex<stx::Option<proto::UiValues>> current_settings;
 
         Server();
 
         void handle_ai_state(proto::ModuleState ok);
         void handle_roboteam_ai();
 
-        void handle_interface(proto::UiSettings data);
+        void handle_interface(proto::UiValues data);
         void handle_modules();
 
         void run();

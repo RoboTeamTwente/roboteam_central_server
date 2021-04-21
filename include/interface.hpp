@@ -9,9 +9,9 @@ namespace rtt::central {
     template <size_t port>
     struct Interface {
         ix::WebSocketServer server{ port };
-        std::function<void(proto::UiSettings)> functor;
+        std::function<void(proto::UiValues)> functor;
 
-        void run(std::function<void(proto::UiSettings)>&& functor) {
+        void run(std::function<void(proto::UiValues)>&& functor) {
             this->functor = functor;
             server.setOnClientMessageCallback(
                 [this](std::shared_ptr<ix::ConnectionState> connectionState,
@@ -43,7 +43,7 @@ namespace rtt::central {
         }
 
         void handle_incoming(std::shared_ptr<ix::ConnectionState>, ix::WebSocket&, const ix::WebSocketMessagePtr& msg) {
-            proto::UiSettings data;
+            proto::UiValues data;
             if (!data.ParseFromString(msg->str)) {
                 std::cerr << "Something else than proto::UiSettings has been received by central from ui" << std::endl;
                 return;
