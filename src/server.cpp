@@ -1,5 +1,6 @@
 #include "server.hpp"
 #include <roboteam_utils/Time.h>
+#include <roboteam_utils/Timer.h>
 
 namespace rtt::central {
 
@@ -8,27 +9,24 @@ namespace rtt::central {
     }
 
     void Server::handle_roboteam_ai() {
-        // read incoming data and forward to modules.
-        Time last_interface_sent_time = Time::now() - Time(1.0);
-        while (_run.load()) {
-            //TODO: don't spam AI with settings
-            auto ai = roboteam_ai.acquire();
-            Time now = Time::now(); //TODO: prevent spamming system calls
-            if (current_settings.acquire()->is_some() && now > last_interface_sent_time + Time(1.0)) {
-              last_interface_sent_time = now;
-              auto setting_message = current_settings.acquire()->clone();
-              ai->write(std::move(setting_message).unwrap());
-            }
+        // read incoming data from roboteam_ai
+        roboteam_utils::Timer timer;
+        timer.loop([&](){
+                     if(!_run.load()){ timer.stop();}
+                     auto ai = roboteam_ai.acquire();
 
-            ai->read_next<proto::ModuleState>()
-                .match(
-                    [this](proto::ModuleState&& ok) { this->handle_ai_state(ok); },
-                    [](std::string&& err) {
-                        if (err.size()) {
-                            std::cout << "Error packet received: " << std::endl;
-                            std::cout << err << std::endl;
-                     } });
-        }
+                     ai->read_next<proto::ModuleState>()
+                         .match(
+                             [this](proto::ModuleState&& ok) { this->handle_ai_state(ok); },
+                             [](std::string&& err) {
+                               if (err.size()) {
+                                 std::cout << "Error packet received: " << std::endl;
+                                 std::cout << err << std::endl;
+                               } });
+        ;},
+                   100
+        );
+
     }
 
 
@@ -39,6 +37,7 @@ namespace rtt::central {
         *ok.add_handshakes() = each;
       }
         // send it to the interface
+        //ok.PrintDebugString();
         roboteam_interface.acquire()->write(ok);
         // forward this state to all modules.
         //modules.broadcast(ok); //TODO: This call locks/blocks for some reason?
@@ -48,6 +47,7 @@ namespace rtt::central {
 
       *this->current_settings.acquire() = stx::Some(std::move(data));
         //TODO: if settingschanged or every 0.5 seconds, send settings to AI
+        roboteam_ai.acquire()->write(current_settings.acquire()->value());
     }
 
     void Server::handle_modules() {
@@ -61,7 +61,7 @@ namespace rtt::central {
         }) };
 
         roboteam_interface.acquire()->run([this](proto::UiValues data) {
-            handle_interface(std::move(data)); 
+            handle_interface(std::move(data));
         });
 
         std::cout << "Constructing Modules thread." << std::endl;
