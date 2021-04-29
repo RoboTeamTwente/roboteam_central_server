@@ -44,7 +44,7 @@ namespace rtt::central {
     }
 
     void Server::handle_interface(proto::UiValues data) {
-
+      data.PrintDebugString();
       *this->current_settings.acquire() = stx::Some(std::move(data));
         //TODO: if settingschanged or every 0.5 seconds, send settings to AI
         roboteam_ai.acquire()->write(current_settings.acquire()->value());
@@ -60,7 +60,7 @@ namespace rtt::central {
             this->handle_roboteam_ai();
         }) };
 
-        roboteam_interface.acquire()->run([this](proto::UiValues data) {
+        roboteam_interface.acquire()->run([&](proto::UiValues data) {
             handle_interface(std::move(data));
         });
 

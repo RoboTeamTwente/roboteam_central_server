@@ -38,6 +38,7 @@ namespace rtt::central {
                     }
                 });
 
+            server.disablePerMessageDeflate(); //TODO: necsesary or not?
             server.listen();
             server.start();
         }
@@ -45,6 +46,7 @@ namespace rtt::central {
         void handle_incoming(std::shared_ptr<ix::ConnectionState>, ix::WebSocket&, const ix::WebSocketMessagePtr& msg) {
             proto::UiValues data;
             if (!data.ParseFromString(msg->str)) {
+              //TODO: also check if proto message is initialized properly, currently does not always catch bad messages
                 std::cerr << "Something else than proto::UiSettings has been received by central from ui" << std::endl;
                 return;
             }
