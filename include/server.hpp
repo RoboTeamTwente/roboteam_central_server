@@ -39,10 +39,11 @@ namespace rtt::central {
          * @brief There is a direct conneciton to the AI and the interface.
          * Both are readwrite and continuously read and written to.
          */
-        Mutex<Interface<16971>> roboteam_interface{};
+        Mutex<Connection<zmqpp::socket_type::pair, 16971>> roboteam_interface{};
         Mutex<Connection<zmqpp::socket_type::pair, 16970>> roboteam_ai;
 
         Mutex<std::thread> ai_thread;
+        Mutex<std::thread> interface_thread;
         Mutex<std::thread> module_thread;
 
         // placeholder type Setting
@@ -53,7 +54,7 @@ namespace rtt::central {
         void handle_ai_state(proto::ModuleState ok);
         void handle_roboteam_ai();
 
-        void handle_interface(proto::UiValues data);
+        void handle_interface();
         void handle_modules();
 
         void run();

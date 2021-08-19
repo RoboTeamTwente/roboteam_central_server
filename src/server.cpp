@@ -43,11 +43,26 @@ namespace rtt::central {
         //modules.broadcast(ok); //TODO: This call locks/blocks for some reason?
     }
 
-    void Server::handle_interface(proto::UiValues data) {
-      data.PrintDebugString();
-      *this->current_settings.acquire() = stx::Some(std::move(data));
-        //TODO: if settingschanged or every 0.5 seconds, send settings to AI
-        roboteam_ai.acquire()->write(current_settings.acquire()->value());
+    void Server::handle_interface() {
+        roboteam_utils::Timer timer;
+        timer.loop([&](){
+            if(!_run.load()){ timer.stop();}
+            auto iface = roboteam_interface.acquire();
+
+            iface->read_next<proto::UiValues>()
+            .match(
+                [this](proto::UiValues&& ok) {
+                        *this->current_settings.acquire() = stx::Some(std::move(ok));
+                    //TODO: if settingschanged or every 0.5 seconds, send settings to AI
+                    roboteam_ai.acquire()->write(current_settings.acquire()->value()); },
+                [](std::string&& err) {
+                    if (err.size()) {
+                        std::cout << "Error packet received: " << std::endl;
+                        std::cout << err << std::endl;
+                    } });
+            ;},
+                   100
+                   );
     }
 
     void Server::handle_modules() {
@@ -60,9 +75,11 @@ namespace rtt::central {
             this->handle_roboteam_ai();
         }) };
 
-        roboteam_interface.acquire()->run([&](proto::UiValues data) {
-            handle_interface(std::move(data));
-        });
+
+        new (&interface_thread) Mutex{ std::thread([this]() {
+            this->handle_interface();
+        }) };
+
 
         std::cout << "Constructing Modules thread." << std::endl;
         new (&module_thread) Mutex{ std::thread([this]() {
