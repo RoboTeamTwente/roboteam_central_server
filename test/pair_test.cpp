@@ -3,7 +3,7 @@
 TEST(ServerTests, websocket_test) {
     Server s{};
 
-    std::thread t{ run_server, &s };
+    std::thread t{run_server, &s};
     sleep_ms(1000);
 
     rtt::networking::PairReceiver<16970> ai{};
@@ -40,7 +40,7 @@ TEST(ServerTests, websocket_test) {
 
 TEST(ServerTests, interface_test) {
     Server s{};
-    std::thread t{ run_server, &s };
+    std::thread t{run_server, &s};
     sleep_ms(1000);
     rtt::networking::PairReceiver<16970> ai{};
 
