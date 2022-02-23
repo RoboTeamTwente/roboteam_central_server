@@ -1,63 +1,57 @@
 #ifndef __SERVER_HPP__
 #define __SERVER_HPP__
 
-#include <roboteam_proto/Setting.pb.h>
-#include <roboteam_proto/State.pb.h>
-#include <stx/option.h>
+#include <proto/Setting.pb.h>
+#include <proto/State.pb.h>
+#include <optional>
 
 #include <thread>
 #include <vector>
 
-#include "central_utils.hpp"
 #include "connection.hpp"
-#include "interface.hpp"
-#include "modulehandler.hpp"
-#include "mutex.hpp"
 
 namespace rtt::central {
 
-    struct Server {
+    class Server {
+    private:
         /**
-         * @brief Boolean that describes whether the server should keep running
+         * Boolean that describes whether the server should keep running
          */
         std::atomic<bool> _run = true;
+        /**
+         * The current thread associated with the given Server
+         */
+        std::thread thrd;
 
         /**
-         * @brief These are the modules connected.
-         * They merely _receive_ data, they never send any, apart from inital handshake.
+         * The main loop of the server.
+         *
+         * The loop will receive data from all registered zmqpp connections and forward it to every other connection but the source.
+         * It will block until _run is set to false
+         *
+         * @sa Server::stop()
          */
-        ModuleHandler modules;  // ->write() broadcasts
-
-        // When a module broadcasts its handshare (Handshake.proto)
-        // it's stored here, ModuleHandler basically backtracks it to this vector
-        // this is why ModuleHandler takes an std::vector<proto::Handshake>* as
-        // ctor argument
-        Mutex<std::vector<proto::Handshake>> module_handshakes;
-
-
-        /**
-         * @brief There is a direct conneciton to the AI and the interface.
-         * Both are readwrite and continuously read and written to.
-         */
-        Mutex<Connection<zmqpp::socket_type::pair, 16971>> roboteam_interface{};
-        Mutex<Connection<zmqpp::socket_type::pair, 16970>> roboteam_ai;
-
-        Mutex<std::thread> ai_thread;
-        Mutex<std::thread> interface_thread;
-        Mutex<std::thread> module_thread;
-
-        // placeholder type Setting
-        Mutex<stx::Option<proto::UiValues>> current_settings;
-
-        Server();
-
-        void handle_ai_state(proto::ModuleState ok);
-        void handle_roboteam_ai();
-
-        void handle_interface();
-        void handle_modules();
-
         void run();
+    public:
+        /**
+         * Start the main loop on its own thread.
+         */
+        void start();
+
+        /**
+         * Wait for the thread of the main loop to exit.
+         *
+         * The method will join() the running thread if it is joinable(), otherwise it will not block.
+         */
+        void wait();
+
+        /**
+         * Stop the main server loop.
+         *
+         * Sets an internal atomic boolean to false, terminating the while loop the next time the condition is evaluated. It can take up to 10s with the given configuration.
+         *
+         * @sa Server::wait()
+         */
         void stop();
     };
 
